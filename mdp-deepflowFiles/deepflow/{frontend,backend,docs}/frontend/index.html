@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Deep Flow — Study OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #060810;
+  --bg2:      #0a0d16;
+  --surface:  rgba(255,255,255,0.03);
+  --border:   rgba(255,255,255,0.06);
+  --border2:  rgba(255,255,255,0.12);
+  --gold:     #c9a84c;
+  --gold2:    #f0d080;
+  --blue:     #4a8fff;
+  --teal:     #38d9b0;
+  --danger:   #ff6b6b;
+  --text:     #dde3f0;
+  --muted:    #4a5270;
+  --muted2:   #6a7290;
+  --ff-title: 'Cinzel', serif;
+  --ff-body:  'DM Sans', sans-serif;
+  --ff-mono:  'JetBrains Mono', monospace;
+  --glow-gold: 0 0 20px rgba(201,168,76,0.4);
+  --glow-blue: 0 0 20px rgba(74,143,255,0.4);
+  --glow-teal: 0 0 20px rgba(56,217,176,0.3);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ff-body);
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: default;
+}
+
+/* ──────────────── CANVAS STARS ──────────────── */
+#stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+/* ──────────────── GRAIN OVERLAY ──────────────── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 200px;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ──────────────── SCREENS ──────────────── */
+.screen {
+  position: fixed; inset: 0; z-index: 2;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s;
+}
+.screen.active { display: flex; }
+
+/* ──────────────── SCREEN 1: INTENT ──────────────── */
+#screen-intent {
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(74,143,255,0.06) 0%, transparent 70%);
+}
+
+.intent-wrap {
+  text-align: center;
+  max-width: 560px;
+  width: 90%;
+  animation: fadeUp 0.8s ease forwards;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(24px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.brand {
+  font-family: var(--ff-title);
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--gold2);
+  text-shadow: var(--glow-gold);
+  margin-bottom: 6px;
+}
+
+.brand-sub {
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-bottom: 48px;
+}
+
+.intent-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-bottom: 14px;
+}
+
+.intent-input-wrap {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.intent-input {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 18px 24px;
+  color: var(--text);
+  font-family: var(--ff-body);
+  font-size: 16px;
+  font-weight: 300;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  text-align: center;
+}
+.intent-input::placeholder { color: var(--muted); }
+.intent-input:focus {
+  border-color: rgba(201,168,76,0.4);
+  box-shadow: 0 0 0 4px rgba(201,168,76,0.06), var(--glow-gold);
+}
+
+.vibe-row {
+  display: flex; gap: 10px; justify-content: center; margin-bottom: 32px; flex-wrap: wrap;
+}
+
+.vibe-chip {
+  padding: 8px 18px;
+  border-radius: 30px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted2);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 7px;
+}
+.vibe-chip:hover { border-color: var(--border2); color: var(--text); background: rgba(255,255,255,0.06); }
+.vibe-chip.selected {
+  border-color: rgba(201,168,76,0.5);
+  background: rgba(201,168,76,0.08);
+  color: var(--gold2);
+  box-shadow: var(--glow-gold);
+}
+
+.begin-btn {
+  width: 100%;
+  padding: 18px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.08));
+  border: 1px solid rgba(201,168,76,0.35);
+  color: var(--gold2);
+  font-family: var(--ff-title);
+  font-size: 15px;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: var(--glow-gold);
+}
+.begin-btn:hover {
+  background: linear-gradient(135deg, rgba(201,168,76,0.25), rgba(201,168,76,0.12));
+  transform: translateY(-1px);
+  box-shadow: 0 0 30px rgba(201,168,76,0.5);
+}
+
+/* ──────────────── SCREEN 2: STUDY ──────────────── */
+#screen-study {
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+/* Biome background */
+.biome-bg {
+  position: fixed; inset: 0; z-index: -1;
+  transition: opacity 1.5s ease;
+  opacity: 0;
+}
+.biome-bg.active { opacity: 1; }
+
+/* Top bar */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 52px;
+  z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  background: rgba(6,8,16,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+.topbar-title {
+  font-family: var(--ff-title);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--gold2);
+}
+.topbar-topic {
+  font-size: 11px;
+  color: var(--muted2);
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.topbar-center {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--ff-mono);
+  font-size: 16px;
+  color: var(--teal);
+  letter-spacing: 0.06em;
+}
+.timer-dot { width:7px; height:7px; border-radius:50%; background:var(--teal); box-shadow: var(--glow-teal); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.75)} }
+
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.focus-bar-wrap {
+  display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--muted2);
+}
+.focus-track {
+  width: 80px; height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px; overflow: hidden;
+}
+.focus-fill {
+  height: 100%; width: 70%;
+  background: linear-gradient(90deg, var(--danger), #ffa500, var(--teal));
+  background-size: 200%;
+  border-radius: 2px;
+  transition: width 1s ease;
+}
+
+.icon-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+.icon-btn:hover { border-color: var(--border2); color: var(--text); }
+.icon-btn.active { border-color: rgba(56,217,176,0.4); color: var(--teal); background: rgba(56,217,176,0.07); }
+
+/* Study layout */
+.study-body {
+  margin-top: 52px;
+  width: 100%;
+  height: calc(100vh - 52px);
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+}
+
+/* ──── QUEST LOG (LEFT) ──── */
+.quest-panel {
+  border-right: 1px solid var(--border);
+  background: rgba(6,8,16,0.7);
+  backdrop-filter: blur(12px);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-title {
+  padding: 16px 18px 12px;
+  font-family: var(--ff-title);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-title-icon { font-size: 13px; }
+
+/* Skill tree SVG area */
+.skill-tree-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  padding: 10px;
+}
+
+#skill-svg {
+  width: 100%; height: 280px;
+}
+
+/* Quest items */
+.quest-list {
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+.quest-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 12px;
+  color: var(--muted2);
+}
+.quest-item:hover { border-color: var(--border2); color: var(--text); }
+.quest-item.done {
+  border-color: rgba(201,168,76,0.25);
+  background: rgba(201,168,76,0.05);
+  color: var(--gold);
+}
+.quest-item.done .q-check { background: var(--gold); border-color: var(--gold); box-shadow: var(--glow-gold); }
+
+.q-check {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  transition: all 0.3s;
+}
+
+.quest-footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; color: var(--muted2);
+}
+.focus-hours {
+  display: flex; align-items: center; gap: 5px;
+  color: var(--gold);
+  font-family: var(--ff-mono);
+  font-size: 12px;
+}
+
+/* ──── MAIN (CENTER) ──── */
+.main-panel {
+  display: flex; flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ghost avatar */
+.ghost-avatar {
+  position: absolute;
+  bottom: 90px; right: 24px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(74,143,255,0.3);
+  background: rgba(74,143,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: var(--glow-blue);
+  transition: all 0.5s;
+  cursor: pointer;
+  z-index: 5;
+  display: none;
+}
+.ghost-avatar.visible { display: flex; }
+.ghost-avatar.reading { animation: ghostFloat 3s ease-in-out infinite; }
+.ghost-avatar.idle { opacity: 0.4; filter: grayscale(0.5); }
+
+@keyframes ghostFloat {
+  0%,100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.03); }
+}
+
+/* Chat area */
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 24px 12px;
+  display: flex; flex-direction: column; gap: 16px;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+
+.msg-row {
+  display: flex; gap: 10px;
+  animation: msgIn 0.35s cubic-bezier(.22,.68,0,1.2) forwards;
+  opacity: 0; transform: translateY(10px);
+}
+@keyframes msgIn { to { opacity:1; transform:translateY(0); } }
+
+.msg-row.user { flex-direction: row-reverse; }
+
+.msg-avatar {
+  width: 30px; height: 30px; border-radius: 8px;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; border: 1px solid var(--border);
+}
+.msg-avatar.ai-av { background: rgba(201,168,76,0.08); border-color: rgba(201,168,76,0.2); }
+.msg-avatar.user-av { background: rgba(74,143,255,0.08); border-color: rgba(74,143,255,0.2); }
+
+.bubble {
+  max-width: 72%;
+  padding: 11px 15px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.65;
+  border: 1px solid var(--border);
+}
+.bubble.ai {
+  background: rgba(255,255,255,0.025);
+  border-radius: 4px 12px 12px 12px;
+  border-color: rgba(201,168,76,0.1);
+}
+.bubble.user {
+  background: rgba(74,143,255,0.08);
+  border-color: rgba(74,143,255,0.18);
+  border-radius: 12px 4px 12px 12px;
+  text-align: right;
+}
+
+.bubble-tag {
+  display: inline-block; margin-top: 7px;
+  font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 4px;
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold); background: rgba(201,168,76,0.06);
+}
+
+.typing-indicator {
+  display: flex; gap: 4px; padding: 4px 2px; align-items: center;
+}
+.typing-indicator span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold); opacity: 0.5;
+  animation: typeBounce 1.2s ease-in-out infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typeBounce { 0%,60%,100%{transform:translateY(0);opacity:0.4} 30%{transform:translateY(-5px);opacity:1} }
+
+/* Anxiety dump banner */
+.anxiety-banner {
+  margin: 0 20px 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,107,107,0.2);
+  background: rgba(255,107,107,0.05);
+  font-size: 12px; color: var(--muted2);
+  display: none;
+}
+.anxiety-banner.open { display: block; }
+.anxiety-banner textarea {
+  width: 100%;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,107,107,0.2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: var(--ff-body);
+  font-size: 12px;
+  resize: none; outline: none;
+  margin-top: 8px;
+}
+.anxiety-submit {
+  margin-top: 8px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,107,107,0.3);
+  background: rgba(255,107,107,0.08);
+  color: #ff9090;
+  font-size: 11px; cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--ff-body);
+}
+.anxiety-submit:hover { background: rgba(255,107,107,0.15); }
+
+/* Input bar */
+.input-bar {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(6,8,16,0.8);
+  backdrop-filter: blur(8px);
+  display: flex; gap: 10px; align-items: flex-end;
+}
+
+.input-actions {
+  display: flex; gap: 6px; align-items: center;
+}
+
+.input-wrap {
+  flex: 1;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-wrap:focus-within {
+  border-color: rgba(201,168,76,0.3);
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.04);
+}
+
+.chat-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text);
+  font-family: var(--ff-body); font-size: 13px;
+  resize: none; max-height: 80px; min-height: 20px;
+}
+.chat-input::placeholder { color: var(--muted); }
+
+.send-btn {
+  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(201,168,76,0.3), rgba(201,168,76,0.15));
+  border: 1px solid rgba(201,168,76,0.4);
+  color: var(--gold2); font-size: 15px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.send-btn:hover { transform: scale(1.05); box-shadow: var(--glow-gold); }
+
+/* ──── RIGHT PANEL ──── */
+.right-panel {
+  border-left: 1px solid var(--border);
+  background: rgba(6,8,16,0.7);
+  backdrop-filter: blur(12px);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* Face monitor */
+.cam-section { padding: 14px; border-bottom: 1px solid var(--border); }
+
+.cam-view {
+  width: 100%; aspect-ratio: 4/3;
+  background: rgba(0,0,0,0.5);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.cam-placeholder { font-size: 11px; color: var(--muted); text-align: center; }
+.cam-placeholder .cam-icon { font-size: 26px; opacity: 0.25; margin-bottom: 6px; }
+#cam-video { width:100%; height:100%; object-fit:cover; display:none; border-radius:9px; }
+
+.ear-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; font-size: 10px; color: var(--muted2);
+}
+.ear-num { font-family: var(--ff-mono); color: var(--teal); font-size: 11px; }
+
+.ear-track {
+  flex: 1; height: 3px; background: rgba(255,255,255,0.06);
+  border-radius: 2px; overflow: hidden; margin: 0 10px;
+}
+.ear-fill {
+  height: 100%; border-radius: 2px;
+  background: var(--teal);
+  transition: width 0.3s, background 0.3s;
+}
+
+.drowsy-bar {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,179,71,0.25);
+  background: rgba(255,179,71,0.05);
+  font-size: 10px; color: #ffa05a;
+  display: none;
+  animation: slideDown 0.3s ease;
+}
+.drowsy-bar.on { display: flex; gap: 6px; align-items: center; }
+@keyframes slideDown { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+
+/* Biome section */
+.biome-section { padding: 14px; border-bottom: 1px solid var(--border); }
+
+.biome-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 10px;
+}
+
+.biome-card {
+  aspect-ratio: 3/2;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  position: relative; overflow: hidden;
+  cursor: pointer;
+  transition: all 0.25s;
+  display: flex; align-items: flex-end;
+}
+.biome-card:hover { border-color: var(--border2); transform: scale(1.02); }
+.biome-card.locked { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.8); }
+.biome-card.active-biome { border-color: rgba(201,168,76,0.5); box-shadow: var(--glow-gold); }
+
+.biome-bg-img {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  border-radius: 7px;
+}
+.biome-0 { background: linear-gradient(135deg, #0a1628, #1a2a4a); }
+.biome-1 { background: linear-gradient(135deg, #0d1f0d, #1a3020); }
+.biome-2 { background: linear-gradient(135deg, #1a0d0d, #2a1a0d); }
+.biome-3 { background: linear-gradient(135deg, #1a1a2e, #2a0a3a); }
+
+.biome-label {
+  position: relative; z-index: 1;
+  font-size: 9px; letter-spacing: 0.06em;
+  padding: 4px 6px;
+  background: rgba(0,0,0,0.6);
+  width: 100%; color: var(--muted2);
+  text-align: center;
+}
+.biome-card.active-biome .biome-label { color: var(--gold); }
+.lock-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-60%); font-size: 16px; opacity: 0.5; }
+
+/* Artifacts */
+.artifacts-section { flex: 1; padding: 14px; overflow-y: auto; }
+
+.artifact-list {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+}
+
+.artifact-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 11px;
+}
+.artifact-item:hover {
+  border-color: rgba(201,168,76,0.25);
+  background: rgba(201,168,76,0.04);
+  color: var(--gold);
+}
+.artifact-item.locked { opacity: 0.35; cursor: not-allowed; }
+.artifact-icon { font-size: 16px; }
+.artifact-info .artifact-name { color: var(--text); font-size: 12px; }
+.artifact-info .artifact-desc { color: var(--muted2); font-size: 10px; margin-top: 1px; }
+
+/* Sound bar */
+.sound-bar {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 10px; color: var(--muted2);
+}
+.sound-controls { display: flex; gap: 6px; }
+.sound-chip {
+  padding: 4px 10px;
+  border-radius: 20px; border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted2); font-size: 10px; cursor: pointer;
+  transition: all 0.15s; font-family: var(--ff-body);
+}
+.sound-chip:hover { border-color: var(--border2); color: var(--text); }
+.sound-chip.active {
+  border-color: rgba(56,217,176,0.35);
+  background: rgba(56,217,176,0.07);
+  color: var(--teal);
+}
+
+/* ──────────────── SCREEN 3: SUMMARY ──────────────── */
+#screen-summary {
+  background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(201,168,76,0.07) 0%, transparent 70%);
+  overflow-y: auto;
+  padding: 40px 20px;
+}
+
+.summary-card {
+  width: 100%; max-width: 560px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 20px;
+  padding: 36px 32px;
+  animation: fadeUp 0.6s ease forwards;
+}
+
+.summary-score {
+  text-align: center; margin-bottom: 28px;
+}
+.score-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted2); margin-bottom: 10px; }
+.score-num {
+  font-family: var(--ff-title);
+  font-size: 72px; font-weight: 700;
+  color: var(--gold2);
+  text-shadow: var(--glow-gold);
+  line-height: 1;
+}
+.score-sub { font-size: 12px; color: var(--muted2); margin-top: 6px; }
+
+.summary-divider {
+  height: 1px; background: var(--border); margin: 20px 0;
+}
+
+.summary-section-title {
+  font-family: var(--ff-title);
+  font-size: 13px; letter-spacing: 0.12em;
+  color: var(--gold); margin-bottom: 14px;
+}
+
+.quiz-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px; color: var(--muted2);
+}
+.quiz-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.25);
+  color: var(--gold);
+  font-size: 11px; font-family: var(--ff-mono);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+
+.unlock-box {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(56,217,176,0.25);
+  background: rgba(56,217,176,0.05);
+  display: flex; align-items: center; gap: 14px;
+}
+.unlock-thumb {
+  width: 70px; height: 52px; border-radius: 8px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+.unlock-info .unlock-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--teal); }
+.unlock-info .unlock-name { font-family: var(--ff-title); font-size: 15px; color: var(--text); margin-top: 3px; }
+.unlock-info .unlock-desc { font-size: 11px; color: var(--muted2); margin-top: 2px; }
+
+.continue-btn {
+  width: 100%; margin-top: 24px;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.06));
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold2);
+  font-family: var(--ff-title);
+  font-size: 13px; letter-spacing: 0.15em;
+  cursor: pointer; transition: all 0.2s;
+}
+.continue-btn:hover { background: rgba(201,168,76,0.2); box-shadow: var(--glow-gold); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Tooltip */
+.tooltip {
+  position: fixed; z-index: 100;
+  padding: 5px 10px;
+  background: rgba(10,13,22,0.95);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  font-size: 11px; color: var(--muted2);
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.15s;
+}
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ═══════════ SCREEN 1: INTENT ═══════════ -->
+<div class="screen active" id="screen-intent">
+  <div class="intent-wrap">
+    <div class="brand">DEEP FLOW</div>
+    <div class="brand-sub">Study OS · Flow State Engine</div>
+
+    <div class="intent-label">What will you master today?</div>
+    <div class="intent-input-wrap">
+      <input class="intent-input" id="goalInput" placeholder="e.g. Master Thermodynamics" maxlength="60"/>
+    </div>
+
+    <div class="intent-label" style="margin-bottom:10px">Choose your vibe</div>
+    <div class="vibe-row">
+      <div class="vibe-chip selected" onclick="toggleVibe(this)" data-v="lofi">🎵 Lo-Fi Beats</div>
+      <div class="vibe-chip" onclick="toggleVibe(this)" data-v="gamma">⚡ 40Hz Gamma</div>
+      <div class="vibe-chip" onclick="toggleVibe(this)" data-v="ghost">👻 Ghost Partner</div>
+      <div class="vibe-chip" onclick="toggleVibe(this)" data-v="silent">🤫 Silent Library</div>
+    </div>
+
+    <button class="begin-btn" onclick="beginSession()">ENTER DEEP FLOW</button>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 2: STUDY ═══════════ -->
+<div class="screen" id="screen-study">
+
+  <!-- Biome backgrounds -->
+  <div class="biome-bg" id="biome-void" style="background: radial-gradient(ellipse 80% 70% at 50% 30%, rgba(20,30,60,0.8), transparent); active"></div>
+  <div class="biome-bg" id="biome-forest" style="background: radial-gradient(ellipse 80% 70% at 30% 50%, rgba(10,40,20,0.9), transparent 60%), radial-gradient(ellipse 60% 80% at 70% 60%, rgba(5,30,15,0.7), transparent);"></div>
+  <div class="biome-bg" id="biome-cafe" style="background: radial-gradient(ellipse 70% 60% at 50% 30%, rgba(60,30,10,0.9), transparent 60%), radial-gradient(ellipse at bottom, rgba(40,15,5,0.8), transparent 50%);"></div>
+  <div class="biome-bg" id="biome-library" style="background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(40,20,60,0.9), transparent 70%), radial-gradient(ellipse at bottom, rgba(20,5,40,0.8), transparent 50%);"></div>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title">DEEP FLOW</span>
+      <span class="topbar-topic" id="topbar-topic">—</span>
+    </div>
+    <div class="topbar-center">
+      <div class="timer-dot"></div>
+      <span id="timer">00:00:00</span>
+    </div>
+    <div class="topbar-right">
+      <div class="focus-bar-wrap">
+        <span>FOCUS</span>
+        <div class="focus-track"><div class="focus-fill" id="focusFill"></div></div>
+        <span id="focusPct" style="font-family:var(--ff-mono);font-size:10px;color:var(--teal)">—</span>
+      </div>
+      <div class="icon-btn" id="anxietyToggle" onclick="toggleAnxiety()" title="Mental RAM Dump">🧠</div>
+      <div class="icon-btn" id="ghostToggle" onclick="toggleGhost()" title="Ghost Partner">👻</div>
+      <div class="icon-btn" onclick="endSession()" title="End Session" style="color:var(--danger)">⏹</div>
+    </div>
+  </div>
+
+  <!-- STUDY BODY -->
+  <div class="study-body">
+
+    <!-- QUEST LOG -->
+    <div class="quest-panel">
+      <div class="panel-title"><span class="panel-title-icon">⬡</span> Quest Log</div>
+      <div class="skill-tree-wrap">
+        <svg id="skill-svg" viewBox="0 0 260 280"></svg>
+      </div>
+      <div class="quest-list" id="questList"></div>
+      <div class="quest-footer">
+        <span>Progress</span>
+        <div class="focus-hours">⟡ <span id="focusHrsNum">0.0</span> hrs</div>
+      </div>
+    </div>
+
+    <!-- MAIN CHAT -->
+    <div class="main-panel">
+
+      <!-- Anxiety banner -->
+      <div class="anxiety-banner" id="anxietyBanner">
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:2px">🧠 Mental RAM Dump — clear your head before diving in</div>
+        <textarea rows="3" placeholder="Type everything on your mind…" id="anxietyText"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <button class="anxiety-submit" onclick="submitAnxiety()">▸ Store & Clear</button>
+          <span style="font-size:10px;color:var(--muted)" id="anxietySummaryOut"></span>
+        </div>
+      </div>
+
+      <div class="chat-scroll" id="chatScroll"></div>
+
+      <!-- Ghost avatar -->
+      <div class="ghost-avatar" id="ghostAvatar">👻</div>
+
+      <!-- Input bar -->
+      <div class="input-bar">
+        <div class="input-actions">
+          <div class="icon-btn" onclick="quickAction('hint')" title="Hint">💡</div>
+          <div class="icon-btn" onclick="quickAction('explain')" title="Explain differently">🔄</div>
+        </div>
+        <div class="input-wrap">
+          <textarea class="chat-input" id="chatInput" rows="1" placeholder="Ask a question, think out loud…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" onclick="sendMsg()">↑</button>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="panel-title"><span class="panel-title-icon">◑</span> Face Monitor</div>
+
+      <div class="cam-section">
+        <div class="cam-view">
+          <video id="cam-video" autoplay playsinline></video>
+          <div class="cam-placeholder" id="camPlaceholder">
+            <div class="cam-icon">◑</div>
+            <div>No camera</div>
+            <button class="sound-chip" style="margin-top:8px;font-size:10px" onclick="startCamera()">Enable</button>
+          </div>
+        </div>
+        <div class="ear-row">
+          <span>EAR</span>
+          <div class="ear-track"><div class="ear-fill" id="earFill" style="width:65%"></div></div>
+          <span class="ear-num" id="earNum">—</span>
+        </div>
+        <div class="drowsy-bar" id="drowsyBar">
+          ⚠ Drowsiness detected — tempo shift active
+        </div>
+      </div>
+
+      <div class="panel-title" style="border-top:1px solid var(--border)"><span class="panel-title-icon">🌍</span> Biomes</div>
+      <div class="biome-section">
+        <div class="biome-grid">
+          <div class="biome-card active-biome" onclick="setBiome('void',0)" data-b="0">
+            <div class="biome-bg-img biome-0"></div>
+            <div class="biome-label">Void</div>
+          </div>
+          <div class="biome-card" onclick="setBiome('forest',1)" data-b="1">
+            <div class="biome-bg-img biome-1"></div>
+            <div class="biome-label">Dark Forest</div>
+          </div>
+          <div class="biome-card locked" data-b="2" data-req="1">
+            <div class="biome-bg-img biome-2"></div>
+            <div class="lock-icon">🔒</div>
+            <div class="biome-label">Rainy Café · 1hr</div>
+          </div>
+          <div class="biome-card locked" data-b="3" data-req="3">
+            <div class="biome-bg-img biome-3"></div>
+            <div class="lock-icon">🔒</div>
+            <div class="biome-label">Library · 3hrs</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-title" style="border-top:1px solid var(--border)"><span class="panel-title-icon">⚗</span> Artifacts</div>
+      <div class="artifacts-section">
+        <div class="artifact-list" id="artifactList"></div>
+      </div>
+
+      <div class="sound-bar">
+        <span id="soundLabel" style="font-family:var(--ff-mono);font-size:10px">♪ —</span>
+        <div class="sound-controls">
+          <button class="sound-chip active" id="btnLofi" onclick="setSound('lofi')">Lo-Fi</button>
+          <button class="sound-chip" id="btnGamma" onclick="setSound('gamma')">40Hz</button>
+          <button class="sound-chip" id="btnOff" onclick="setSound('off')">Off</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 3: SUMMARY ═══════════ -->
+<div class="screen" id="screen-summary">
+  <div class="summary-card">
+    <div class="summary-score">
+      <div class="score-label">Session Complete</div>
+      <div class="score-num" id="scoreNum">87</div>
+      <div class="score-sub" id="scoreTime">Focus time: 00:00 · 3 nodes completed</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-section-title">Quick Review Quiz</div>
+    <div id="quizList"></div>
+    <div class="unlock-box" id="unlockBox">
+      <div class="unlock-thumb" id="unlockThumb">🌧</div>
+      <div class="unlock-info">
+        <div class="unlock-label">New Biome Unlocked!</div>
+        <div class="unlock-name" id="unlockName">Rainy Café</div>
+        <div class="unlock-desc" id="unlockDesc">Atmospheric Tokyo café ambiance</div>
+      </div>
+    </div>
+    <button class="continue-btn" onclick="goHome()">CONTINUE</button>
+  </div>
+</div>
+
+<script>
+// ──────────────── STARS ────────────────
+(function(){
+  const c = document.getElementById('stars');
+  const ctx = c.getContext('2d');
+  function resize(){ c.width=innerWidth; c.height=innerHeight; }
+  resize(); window.addEventListener('resize', resize);
+  const stars = Array.from({length:160}, ()=>({
+    x: Math.random()*innerWidth, y: Math.random()*innerHeight,
+    r: Math.random()*0.9+0.1, a: Math.random(), da: (Math.random()-0.5)*0.005
+  }));
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s=>{
+      s.a = Math.max(0.05, Math.min(0.9, s.a+s.da));
+      if(s.a<=0.05||s.a>=0.9) s.da*=-1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(200,220,255,${s.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ──────────────── STATE ────────────────
+let goal = '', vibes = new Set(['lofi']);
+let sessionSeconds = 0, timerInterval = null;
+let ghostActive = false, ghostReading = false;
+let focusPct = 70;
+let focusHours = 0;
+let currentSound = 'lofi';
+let audioCtx = null, gainNode = null, oscs = [];
+let questNodes = [];
+let completedCount = 0;
+let isDrowsy = false;
+let earSimFrame = 0;
+
+const SOCRATIC = [
+  "Interesting! Before I explain — what do *you* think happens here? Start with your intuition.",
+  "You're close. Can you think of a real-world example that illustrates this concept?",
+  "Good reasoning. What would change if we altered one variable in your mental model?",
+  "That's the right direction. Can you express that as a relationship between two quantities?",
+  "Excellent. Now challenge yourself — where does this principle *break down* or have exceptions?",
+  "Nice thinking. How does this connect to what you already know from earlier in the topic?",
+  "Almost there. What's the underlying *why* — not just the what?",
+];
+let socIdx = 0;
+
+const ARTIFACTS = [
+  { icon:'⚗', name:'Entropy Crystal', desc:'Concept: Thermodynamics', locked:false },
+  { icon:'🌀', name:'Carnot Engine', desc:'Concept: Heat cycles', locked:false },
+  { icon:'⚡', name:'Maxwell\'s Demon', desc:'Concept: Statistical mech', locked:true },
+  { icon:'🔭', name:'Boltzmann Sphere', desc:'Concept: Kinetic theory', locked:true },
+];
+
+// ──────────────── VIBE SELECT ────────────────
+function toggleVibe(el){
+  el.classList.toggle('selected');
+  const v = el.dataset.v;
+  if(el.classList.contains('selected')) vibes.add(v); else vibes.delete(v);
+}
+
+// ──────────────── BEGIN SESSION ────────────────
+function beginSession(){
+  goal = document.getElementById('goalInput').value.trim() || 'Deep Focus';
+  showScreen('screen-study');
+  document.getElementById('topbar-topic').textContent = goal;
+  buildQuestLog();
+  buildArtifacts();
+  startTimer();
+  startEarSim();
+  startFocusSim();
+  if(vibes.has('lofi')||vibes.has('gamma')) initAudio();
+  if(vibes.has('ghost')) enableGhost();
+
+  const intro = `Welcome, scholar. I see you're here to master <strong>${goal}</strong>.<br><br>I won't hand you answers — I'll guide you to them. What aspect would you like to begin with?`;
+  addMsg(intro, false);
+}
+
+// ──────────────── QUEST LOG ────────────────
+const NODE_TOPICS = ['Introduction', 'Core Concepts', 'Key Laws', 'Problem Solving', 'Edge Cases', 'Practice Problems', 'Mastery Test'];
+
+function buildQuestLog(){
+  questNodes = NODE_TOPICS.map((t,i)=>({ label: t, done: false, id: i }));
+  renderTree();
+  renderQuestList();
+}
+
+function renderTree(){
+  const svg = document.getElementById('skill-svg');
+  svg.innerHTML = '';
+  // Layout: tree-like positions
+  const positions = [
+    [130,30],[70,80],[190,80],[50,140],[130,140],[210,140],[100,210],[160,210]
+  ];
+  const edges = [[0,1],[0,2],[1,3],[1,4],[2,4],[2,5],[4,6],[4,7]];
+
+  // Draw edges first
+  edges.forEach(([a,b])=>{
+    if(a>=questNodes.length||b>=questNodes.length) return;
+    const [x1,y1]=positions[a], [x2,y2]=positions[b];
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    const done = questNodes[a]?.done && questNodes[b]?.done;
+    line.setAttribute('stroke', done ? 'rgba(201,168,76,0.5)' : 'rgba(255,255,255,0.08)');
+    line.setAttribute('stroke-width','1.5');
+    line.setAttribute('stroke-dasharray', done ? '0' : '4 4');
+    svg.appendChild(line);
+  });
+
+  // Draw nodes
+  questNodes.forEach((n,i)=>{
+    if(i>=positions.length) return;
+    const [cx,cy]=positions[i];
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.style.cursor='pointer';
+    g.onclick=()=>toggleNode(i);
+
+    const glow = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    glow.setAttribute('cx',cx); glow.setAttribute('cy',cy); glow.setAttribute('r','14');
+    glow.setAttribute('fill', n.done ? 'rgba(201,168,76,0.15)' : 'transparent');
+    g.appendChild(glow);
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r','9');
+    circle.setAttribute('fill', n.done ? 'rgba(201,168,76,0.8)' : 'rgba(255,255,255,0.06)');
+    circle.setAttribute('stroke', n.done ? 'rgba(240,208,128,0.9)' : 'rgba(255,255,255,0.15)');
+    circle.setAttribute('stroke-width','1.5');
+    if(n.done) circle.setAttribute('filter','url(#nodeGlow)');
+    g.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',cx); text.setAttribute('y',cy+22);
+    text.setAttribute('text-anchor','middle');
+    text.setAttribute('font-size','8');
+    text.setAttribute('fill', n.done ? 'rgba(201,168,76,0.8)' : 'rgba(100,120,160,0.8)');
+    text.setAttribute('font-family','DM Sans,sans-serif');
+    text.textContent = n.label;
+    g.appendChild(text);
+
+    svg.appendChild(g);
+  });
+
+  // Glow filter
+  if(!document.getElementById('nodeGlow')){
+    const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+    defs.innerHTML = `<filter id="nodeGlow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+    svg.prepend(defs);
+  }
+}
+
+function renderQuestList(){
+  const list = document.getElementById('questList');
+  list.innerHTML = '';
+  questNodes.forEach((n,i)=>{
+    const div = document.createElement('div');
+    div.className = 'quest-item' + (n.done?' done':'');
+    div.onclick = ()=>toggleNode(i);
+    div.innerHTML = `<div class="q-check">${n.done?'✓':''}</div><span>${n.label}</span>`;
+    list.appendChild(div);
+  });
+}
+
+function toggleNode(i){
+  questNodes[i].done = !questNodes[i].done;
+  completedCount = questNodes.filter(n=>n.done).length;
+  focusHours = parseFloat((sessionSeconds/3600 + completedCount*0.15).toFixed(1));
+  document.getElementById('focusHrsNum').textContent = focusHours.toFixed(1);
+  checkBiomeUnlocks();
+  renderTree();
+  renderQuestList();
+
+  if(questNodes[i].done){
+    addMsg(`Node <strong>${questNodes[i].label}</strong> completed ⟡ +0.15 focus hours earned.`, false, true);
+    maybeUnlockArtifact();
+  }
+}
+
+function checkBiomeUnlocks(){
+  document.querySelectorAll('.biome-card.locked').forEach(card=>{
+    const req = parseFloat(card.dataset.req);
+    if(focusHours >= req){
+      card.classList.remove('locked');
+      card.querySelector('.lock-icon')?.remove();
+    }
+  });
+}
+
+function maybeUnlockArtifact(){
+  const locked = ARTIFACTS.findIndex(a=>a.locked);
+  if(locked>-1){ ARTIFACTS[locked].locked = false; buildArtifacts(); }
+}
+
+function buildArtifacts(){
+  const list = document.getElementById('artifactList');
+  list.innerHTML = '';
+  ARTIFACTS.forEach(a=>{
+    const div = document.createElement('div');
+    div.className = 'artifact-item' + (a.locked?' locked':'');
+    div.innerHTML = `<span class="artifact-icon">${a.icon}</span><div class="artifact-info"><div class="artifact-name">${a.name}</div><div class="artifact-desc">${a.desc}</div></div>`;
+    if(!a.locked) div.onclick = ()=>playArtifact(a);
+    list.appendChild(div);
+  });
+}
+
+function playArtifact(a){
+  addMsg(`🎙 <em>Audio snippet for ${a.name}:</em><br>"Did you know entropy always increases in an isolated system? This is why your room naturally becomes messier — and why time itself has a direction."`, false, true);
+}
+
+// ──────────────── CHAT ────────────────
+function addMsg(html, isUser=false, isSystem=false){
+  const scroll = document.getElementById('chatScroll');
+  const row = document.createElement('div');
+  row.className = 'msg-row' + (isUser?' user':'');
+
+  const av = document.createElement('div');
+  av.className = 'msg-avatar ' + (isUser?'user-av':'ai-av');
+  av.textContent = isUser ? '◉' : (isSystem?'⟡':'◈');
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble ' + (isUser?'user':'ai');
+  bub.innerHTML = html;
+  if(!isUser && !isSystem){
+    bub.innerHTML += '<div class="bubble-tag">Guiding Question</div>';
+  }
+
+  row.appendChild(av); row.appendChild(bub);
+  scroll.appendChild(row);
+  scroll.scrollTop = scroll.scrollHeight;
+
+  // Update ghost state
+  if(ghostActive){ setGhostReading(true); setTimeout(()=>setGhostReading(false), 3000+html.length*20); }
+}
+
+function showTyping(){
+  const scroll = document.getElementById('chatScroll');
+  const row = document.createElement('div');
+  row.className = 'msg-row'; row.id = 'typingRow';
+  row.innerHTML = `<div class="msg-avatar ai-av">◈</div><div class="bubble ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+  scroll.appendChild(row);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function removeTyping(){ document.getElementById('typingRow')?.remove(); }
+
+function sendMsg(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text) return;
+  addMsg(text, true);
+  input.value=''; input.style.height='auto';
+
+  showTyping();
+  const delay = 900 + Math.random()*700;
+  setTimeout(()=>{
+    removeTyping();
+    const resp = SOCRATIC[socIdx % SOCRATIC.length]; socIdx++;
+    addMsg(resp.replace(/\*/g,'<em>').replace(/<\/em>/g,'</em>'));
+  }, delay);
+}
+
+function quickAction(type){
+  const prompts = {
+    hint: "I'm a bit stuck — can I get a small hint?",
+    explain: "Can you explain that differently?"
+  };
+  document.getElementById('chatInput').value = prompts[type];
+  sendMsg();
+}
+
+function handleKey(e){
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMsg(); }
+}
+function autoResize(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,80)+'px';
+}
+
+// ──────────────── ANXIETY DUMP ────────────────
+function toggleAnxiety(){
+  const b = document.getElementById('anxietyBanner');
+  b.classList.toggle('open');
+  document.getElementById('anxietyToggle').classList.toggle('active');
+}
+
+function submitAnxiety(){
+  const text = document.getElementById('anxietyText').value.trim();
+  if(!text) return;
+  const out = document.getElementById('anxietySummaryOut');
+  out.textContent = 'Processing…';
+  setTimeout(()=>{
+    const summaries = [
+      '✓ Stored. Your mind is clear.',
+      '✓ Logged. Focus now.',
+      '✓ Safe. Let it go.',
+      '✓ Noted. You have permission to be present.',
+    ];
+    out.textContent = summaries[Math.floor(Math.random()*summaries.length)];
+    out.style.color = 'var(--teal)';
+    document.getElementById('anxietyText').value = '';
+    setTimeout(()=>{ toggleAnxiety(); out.textContent=''; out.style.color=''; }, 2000);
+  }, 900);
+}
+
+// ──────────────── GHOST ────────────────
+function enableGhost(){
+  ghostActive = true;
+  document.getElementById('ghostAvatar').classList.add('visible');
+  document.getElementById('ghostToggle').classList.add('active');
+}
+function toggleGhost(){
+  ghostActive = !ghostActive;
+  document.getElementById('ghostAvatar').classList.toggle('visible', ghostActive);
+  document.getElementById('ghostToggle').classList.toggle('active', ghostActive);
+}
+function setGhostReading(reading){
+  const av = document.getElementById('ghostAvatar');
+  av.classList.toggle('reading', reading);
+  av.classList.toggle('idle', !reading);
+}
+
+// ──────────────── TIMER ────────────────
+function startTimer(){
+  timerInterval = setInterval(()=>{
+    sessionSeconds++;
+    const h = String(Math.floor(sessionSeconds/3600)).padStart(2,'0');
+    const m = String(Math.floor((sessionSeconds%3600)/60)).padStart(2,'0');
+    const s = String(sessionSeconds%60).padStart(2,'0');
+    document.getElementById('timer').textContent = `${h}:${m}:${s}`;
+    // Update focus hours continuously
+    focusHours = parseFloat((sessionSeconds/3600 + completedCount*0.15).toFixed(2));
+    document.getElementById('focusHrsNum').textContent = focusHours.toFixed(1);
+    checkBiomeUnlocks();
+  }, 1000);
+}
+
+// ──────────────── FOCUS SIM ────────────────
+function startFocusSim(){
+  setInterval(()=>{
+    focusPct = Math.max(20, Math.min(100, focusPct + (Math.random()-0.4)*3));
+    document.getElementById('focusFill').style.width = focusPct+'%';
+    document.getElementById('focusPct').textContent = Math.round(focusPct)+'%';
+  }, 2000);
+}
+
+// ──────────────── EAR SIMULATION ────────────────
+function startEarSim(){
+  setInterval(()=>{
+    earSimFrame++;
+    let ear;
+    // Simulate drowsy dip every ~120 frames
+    if(earSimFrame%120 > 105) { ear = 0.16+Math.random()*0.05; }
+    else { ear = 0.27+Math.random()*0.1; }
+
+    const pct = Math.min(ear/0.45*100, 100);
+    document.getElementById('earNum').textContent = ear.toFixed(3);
+    const fill = document.getElementById('earFill');
+    fill.style.width = pct+'%';
+    fill.style.background = ear<0.22 ? 'var(--danger)' : (ear<0.28?'#ffa500':'var(--teal)');
+
+    const drowsy = ear < 0.22;
+    document.getElementById('drowsyBar').classList.toggle('on', drowsy);
+
+    if(drowsy!==isDrowsy){
+      isDrowsy=drowsy;
+      if(isDrowsy && currentSound!=='off') shiftTempo(true);
+      else if(!isDrowsy) shiftTempo(false);
+    }
+  }, 200);
+}
+
+// ──────────────── CAMERA ────────────────
+function startCamera(){
+  navigator.mediaDevices.getUserMedia({video:true}).then(stream=>{
+    const v = document.getElementById('cam-video');
+    v.srcObject = stream;
+    v.style.display='block';
+    document.getElementById('camPlaceholder').style.display='none';
+  }).catch(()=>{ /* no cam */ });
+}
+
+// ──────────────── BIOME ────────────────
+function setBiome(name, idx){
+  const card = document.querySelector(`[data-b="${idx}"]`);
+  if(card.classList.contains('locked')) return;
+  document.querySelectorAll('.biome-card').forEach(c=>c.classList.remove('active-biome'));
+  card.classList.add('active-biome');
+  document.querySelectorAll('.biome-bg').forEach(b=>b.classList.remove('active'));
+  document.getElementById('biome-'+name)?.classList.add('active');
+}
+
+// ──────────────── AUDIO ────────────────
+function initAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  gainNode = audioCtx.createGain();
+  gainNode.gain.value = 0.06;
+  gainNode.connect(audioCtx.destination);
+  buildLofi();
+  document.getElementById('soundLabel').textContent = '♪ Lo-Fi Active';
+}
+
+function buildLofi(){
+  oscs.forEach(o=>{ try{ o.stop(); }catch(e){} });
+  oscs = [];
+  const freqs = [82.4,110,146.8,196,261.6];
+  freqs.forEach((f,i)=>{
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = i%2===0?'sine':'triangle';
+    o.frequency.value = f;
+    g.gain.value = 0.25/(i+1);
+    o.connect(g); g.connect(gainNode);
+    const lfo = audioCtx.createOscillator();
+    const lg = audioCtx.createGain();
+    lfo.frequency.value = 0.25+i*0.07;
+    lg.gain.value = 0.04;
+    lfo.connect(lg); lg.connect(g.gain);
+    o.start(); lfo.start();
+    oscs.push(o,lfo);
+  });
+}
+
+function buildGamma(){
+  oscs.forEach(o=>{ try{ o.stop(); }catch(e){} });
+  oscs = [];
+  // 40Hz binaural-ish
+  [200,240,40].forEach((f,i)=>{
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.value = f;
+    g.gain.value = i===2? 0.02 : 0.08;
+    o.connect(g); g.connect(gainNode);
+    o.start(); oscs.push(o);
+  });
+}
+
+function shiftTempo(drowsy){
+  if(!gainNode) return;
+  gainNode.gain.setTargetAtTime(drowsy?0.12:0.06, audioCtx.currentTime, 0.8);
+  oscs.forEach(o=>{ if(o.frequency){ o.frequency.setTargetAtTime(o.frequency.value*(drowsy?1.12:1/1.12), audioCtx.currentTime, 0.8); } });
+}
+
+function setSound(type){
+  currentSound = type;
+  ['lofi','gamma','off'].forEach(t=>document.getElementById('btn'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active',t===type));
+
+  if(type==='off'){
+    if(gainNode) gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3);
+    document.getElementById('soundLabel').textContent = '♪ Silent';
+    return;
+  }
+  if(!audioCtx) initAudio(); else gainNode.gain.setTargetAtTime(0.06, audioCtx.currentTime, 0.3);
+  if(type==='lofi'){ buildLofi(); document.getElementById('soundLabel').textContent='♪ Lo-Fi Active'; }
+  if(type==='gamma'){ buildGamma(); document.getElementById('soundLabel').textContent='♪ 40Hz Gamma'; }
+}
+
+// ──────────────── END SESSION ────────────────
+function endSession(){
+  clearInterval(timerInterval);
+  if(gainNode) gainNode.gain.setTargetAtTime(0, audioCtx?.currentTime||0, 0.5);
+  buildSummary();
+  showScreen('screen-summary');
+}
+
+function buildSummary(){
+  const done = questNodes.filter(n=>n.done).length;
+  const score = Math.min(100, Math.round(40 + done*8 + focusPct*0.3));
+  document.getElementById('scoreNum').textContent = score;
+  const m = String(Math.floor(sessionSeconds/60)).padStart(2,'0');
+  const s = String(sessionSeconds%60).padStart(2,'0');
+  document.getElementById('scoreTime').textContent = `Focus time: ${m}:${s} · ${done} nodes completed`;
+
+  const weakPoints = [
+    'What is entropy and why does it always increase?',
+    'Explain the difference between isothermal and adiabatic processes.',
+    'Derive the efficiency of a Carnot engine from first principles.',
+    'How does the second law of thermodynamics relate to time\'s arrow?',
+    'What assumptions does the ideal gas law make?',
+  ];
+  const quiz = document.getElementById('quizList');
+  quiz.innerHTML = '';
+  weakPoints.slice(0,3+Math.floor(done/2)).forEach((q,i)=>{
+    const div = document.createElement('div');
+    div.className = 'quiz-item';
+    div.innerHTML = `<div class="quiz-num">${i+1}</div><span>${q}</span>`;
+    quiz.appendChild(div);
+  });
+
+  // Unlock logic
+  if(focusHours>=1){
+    document.getElementById('unlockThumb').textContent='☕';
+    document.getElementById('unlockName').textContent='Rainy Café';
+    document.getElementById('unlockDesc').textContent='Atmospheric Tokyo café ambiance';
+    document.getElementById('unlockBox').style.display='flex';
+  } else {
+    document.getElementById('unlockBox').style.display='none';
+  }
+}
+
+function goHome(){
+  sessionSeconds=0; completedCount=0; focusHours=0; socIdx=0; isDrowsy=false; earSimFrame=0;
+  document.getElementById('timer').textContent='00:00:00';
+  document.getElementById('chatScroll').innerHTML='';
+  document.getElementById('focusHrsNum').textContent='0.0';
+  showScreen('screen-intent');
+}
+
+// ──────────────── SCREEN SWITCH ────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.toggle('active', s.id===id);
+  });
+}
+</script>
+</body>
+</html>
